@@ -119,7 +119,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       <div class="stat"><span class="k">Última atualização (UTC)</span><span class="v small" id="s-upd">—</span></div>
       <div class="stat"><span class="k">Tokens</span><span class="v" id="s-tok">—</span></div>
       <div class="stat"><span class="k">Ativos 24 h</span><span class="v"><span class="live" id="s-act">—</span></span></div>
-      <div class="stat"><span class="k">Em ambas as redes</span><span class="v" id="s-both">—</span></div>
       <div class="stat"><span class="k">Redes / grupos wash</span><span class="v" id="s-net">—</span></div>
     </div>
   </header>
@@ -209,7 +208,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     $("s-upd").textContent = meta&&meta.atualizado_utc ? meta.atualizado_utc : "—";
     $("s-tok").textContent = tokens.length || "—";
     $("s-act").textContent = tokens.length ? tokens.filter(t=>isRecent(t,ref)).length : "—";
-    $("s-both").textContent = tokens.length ? tokens.filter(t=>(t.redes||[]).length>1).length : "—";
     const wash=redes.filter(r=>!r.excluir).length;
     $("s-net").textContent = redes.length ? wash : "—";
   }
