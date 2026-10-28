@@ -141,7 +141,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num"><button type="button" data-sort="roi">ROI</button></th>
           <th>Contrato</th>
           <th>DexScreener</th>
-          <th>Redes</th>
           <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
           <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
           <th class="num"><button type="button" data-sort="compras">Total Compras</button></th>
@@ -151,6 +150,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num">Valor Token 1.ª Compra</th>
           <th class="num">Valor Token Última Venda</th>
           <th>Descrição</th>
+          <th>Redes</th>
         </tr></thead>
         <tbody id="tb-tok"><tr><td colspan="15" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
@@ -238,7 +238,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="num">${fmtRoi(t)}</td>
         <td class="copycell"><button type="button" class="copy" data-addr="${esc(t.contrato)}" title="Copiar ${esc(t.contrato)}" aria-label="Copiar contrato de ${esc(t.simbolo)}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="ok" hidden>Copiado</span></button></td>
         <td><a class="chart" href="https://dexscreener.com/bsc/${esc(t.contrato)}" target="_blank" rel="noopener" title="Abrir gráfico de ${esc(t.simbolo)} no DexScreener">Gráfico ↗</a></td>
-        <td>${redePills(t.redes)}</td>
         <td class="mono">${esc(t.primeira_utc)}</td>
         <td class="mono">${esc(t.ultima_utc)}</td>
         <td class="num">${fmtN(t.compras)}</td>
@@ -247,7 +246,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="num">${fmtU(t.vendas_usdc,t.aprox)}</td>
         <td class="num"${t.data_compra?` title="${esc(t.data_compra)} UTC"`:""}>${fmtP(t.preco_compra)}</td>
         <td class="num"${t.data_venda?` title="${esc(t.data_venda)} UTC"`:""}>${fmtP(t.preco_venda)}</td>
-        <td class="desc">${t.descricao?esc(t.descricao):'<span style="opacity:.6">—</span>'}</td></tr>`;
+        <td class="desc">${t.descricao?esc(t.descricao):'<span style="opacity:.6">—</span>'}</td>
+        <td>${redePills(t.redes)}</td></tr>`;
     }).join("");
   }
 
