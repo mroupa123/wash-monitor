@@ -138,7 +138,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · só tokens com última venda nos últimos 7 dias (incluindo hoje) e compras ≥ 2.000 USDC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · só tokens com última venda nos últimos 7 dias (incluindo hoje) e compras ≥ 2.000 USDC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Entradas = n.º de compras das Redes 1 e 2, acumuladas desde o início; Total USD = valor dessas compras em stablecoins (≈ inclui WBNB convertido)</span></div>
     <div class="tbl ten" id="wrap-tok">
       <table>
         <thead><tr>
@@ -151,16 +151,14 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="ctr"><button type="button" data-sort="insider">Insider</button></th>
           <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
           <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
-          <th class="num"><button type="button" data-sort="compras">Total Compras</button></th>
-          <th class="num"><button type="button" data-sort="compras_usdc">Compras USDC</button></th>
-          <th class="num"><button type="button" data-sort="vendas">Total Vendas</button></th>
-          <th class="num"><button type="button" data-sort="vendas_usdc">Vendas USDC</button></th>
+          <th class="num"><button type="button" data-sort="compras">Entradas</button></th>
+          <th class="num"><button type="button" data-sort="compras_usdc">Total USD</button></th>
           <th class="num">Valor Token 1.ª Compra</th>
           <th class="num">Valor Token Última Venda</th>
           <th>Descrição</th>
           <th>Redes</th>
         </tr></thead>
-        <tbody id="tb-tok"><tr><td colspan="17" class="empty">A carregar tokens…</td></tr></tbody>
+        <tbody id="tb-tok"><tr><td colspan="15" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -229,8 +227,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
-    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="17" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
-    if(!rows.length){ tb.innerHTML=`<tr><td colspan="17" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="15" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="15" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
@@ -245,8 +243,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="mono">${esc(t.ultima_utc)}</td>
         <td class="num">${fmtN(t.compras)}</td>
         <td class="num">${fmtU(t.compras_usdc,t.aprox)}</td>
-        <td class="num">${fmtN(t.vendas)}</td>
-        <td class="num">${fmtU(t.vendas_usdc,t.aprox)}</td>
         <td class="num"${t.data_compra?` title="${esc(t.data_compra)} UTC"`:""}>${fmtP(t.preco_compra)}</td>
         <td class="num"${t.data_venda?` title="${esc(t.data_venda)} UTC"`:""}>${fmtP(t.preco_venda)}</td>
         <td class="desc">${t.descricao?esc(t.descricao):'<span style="opacity:.6">—</span>'}</td>
@@ -293,7 +289,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         // Regra do volume mínimo: total de compras ≥ 2000 USDC (ou equivalente)
         .filter(x=>(isNum(x.compras_usdc)?x.compras_usdc:0)>=((m&&m.compras_min_usdc)||2000)); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
-      $("tb-tok").innerHTML=`<tr><td colspan="17" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-tok").innerHTML=`<tr><td colspan="15" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
     }
   })();
 })();
