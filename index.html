@@ -65,7 +65,12 @@ th button[data-dir=asc]::after{content:" ↑"}
 .roi{font-weight:600}.roi.up{color:var(--ok)}.roi.down{color:var(--warn)}
 td.desc{white-space:normal;min-width:280px;max-width:420px;font-size:13px}
 .p-down{background:var(--warn-soft);color:var(--warn)}
-td.addrfull{user-select:all;color:var(--muted)}
+td.copycell{text-align:center}
+button.copy{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;background:none;border:1px solid var(--line);border-radius:6px;color:var(--muted);padding:4px 7px;cursor:pointer}
+button.copy:hover{color:var(--accent);border-color:var(--accent)}
+button.copy.done{color:var(--ok);border-color:var(--ok)}
+.tbl.ten{overflow:auto}
+.tbl.ten thead th{z-index:1}
 a.chart{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
 a.chart:hover{text-decoration:underline}
 th.num,td.num{text-align:right}
@@ -127,8 +132,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · "Gráfico" abre o par no DexScreener</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
-    <div class="tbl">
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="tbl ten" id="wrap-tok">
       <table>
         <thead><tr>
           <th><button type="button" data-sort="simbolo">Token</button></th>
@@ -231,7 +236,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td><span class="sym">${esc(t.simbolo)}</span>${(t.contrato||"").toLowerCase()==="0xe254ee6b463807b6f8040797ccd909f5ecddb9d6"?' <span class="pill p-new">origem</span>':""}</td>
         <td class="nm" title="${esc(t.nome)}">${t.nome?esc(t.nome):'<span style="opacity:.6">—</span>'}</td>
         <td class="num">${fmtRoi(t)}</td>
-        <td class="mono addrfull">${esc(t.contrato)}</td>
+        <td class="copycell"><button type="button" class="copy" data-addr="${esc(t.contrato)}" title="Copiar ${esc(t.contrato)}" aria-label="Copiar contrato de ${esc(t.simbolo)}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="ok" hidden>Copiado</span></button></td>
         <td><a class="chart" href="https://dexscreener.com/bsc/${esc(t.contrato)}" target="_blank" rel="noopener" title="Abrir gráfico de ${esc(t.simbolo)} no DexScreener">Gráfico ↗</a></td>
         <td>${redePills(t.redes)}</td>
         <td class="mono">${esc(t.primeira_utc)}</td>
@@ -278,6 +283,17 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   }
 
   function renderAll(){ renderStatus(); renderTokens(); renderRedes(); }
+  // Mostrar 10 linhas de cada vez; as restantes com scroll dentro da tabela
+  function fitTen(){ const w=$("wrap-tok"); if(!w) return; const rows=$("tb-tok").rows; const th=w.querySelector("thead");
+    if(rows.length<=10){ w.style.maxHeight=""; return; }
+    let h=th.offsetHeight; for(let i=0;i<10;i++) h+=rows[i].offsetHeight; w.style.maxHeight=(h+2)+"px"; }
+  new MutationObserver(()=>requestAnimationFrame(fitTen)).observe($("tb-tok"),{childList:true});
+  window.addEventListener("resize",()=>requestAnimationFrame(fitTen));
+  // Copiar contrato
+  $("tb-tok").addEventListener("click",async e=>{ const b=e.target.closest("button.copy"); if(!b) return; const a=b.dataset.addr;
+    const done=()=>{ b.classList.add("done"); b.querySelector(".ok").hidden=false; clearTimeout(b._t); b._t=setTimeout(()=>{b.classList.remove("done"); b.querySelector(".ok").hidden=true;},1500); };
+    try{ await navigator.clipboard.writeText(a); done(); }
+    catch(err){ const ta=document.createElement("textarea"); ta.value=a; ta.style.position="fixed"; ta.style.opacity="0"; document.body.appendChild(ta); ta.select(); let ok=false; try{ ok=document.execCommand("copy"); }catch(_){} ta.remove(); if(ok) done(); else window.prompt?.("Copie o contrato:",a); } });
 
   // Controls
   $("q-tok").addEventListener("input",e=>{st.q=e.target.value;renderTokens();});
