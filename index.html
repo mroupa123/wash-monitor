@@ -62,6 +62,8 @@ th button{font:inherit;color:inherit;letter-spacing:inherit;text-transform:inher
 th button[data-dir]::after{content:" ↓";color:var(--accent)}
 th button[data-dir=asc]::after{content:" ↑"}
 .sym{font-weight:600}
+td.desc{white-space:normal;min-width:280px;max-width:420px;font-size:13px}
+.p-down{background:var(--warn-soft);color:var(--warn)}
 td.addrfull{user-select:all;color:var(--muted)}
 a.chart{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
 a.chart:hover{text-decoration:underline}
@@ -139,8 +141,11 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num"><button type="button" data-sort="compras_usdc">Compras USDC</button></th>
           <th class="num"><button type="button" data-sort="vendas">Total Vendas</button></th>
           <th class="num"><button type="button" data-sort="vendas_usdc">Vendas USDC</button></th>
+          <th class="num">Valor Token 1.ª Compra</th>
+          <th class="num">Valor Token Última Venda</th>
+          <th>Descrição</th>
         </tr></thead>
-        <tbody id="tb-tok"><tr><td colspan="11" class="empty">A carregar tokens…</td></tr></tbody>
+        <tbody id="tb-tok"><tr><td colspan="14" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -179,6 +184,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   const isNum=v=>typeof v==="number"&&isFinite(v);
   const fmtN=v=>isNum(v)?nf0.format(v):'<span style="opacity:.6">—</span>';
   const fmtU=(v,ap)=>isNum(v)?(ap?'<span title="Inclui valor convertido de WBNB">≈ </span>':'')+nf0.format(v):'<span style="opacity:.6">—</span>';
+  const fmtP=v=>{ if(!isNum(v)) return '<span style="opacity:.6">—</span>'; let d; if(v>=1000) d=0; else if(v>=1) d=4; else d=Math.max(4,-Math.floor(Math.log10(v))+3); return "$ "+new Intl.NumberFormat("pt-PT",{minimumFractionDigits:0,maximumFractionDigits:Math.min(d,20)}).format(v); };
+  const tendencia=t=>{ if(!isNum(t.preco_compra)||!isNum(t.preco_venda)) return ""; const ch=(t.preco_venda/t.preco_compra-1)*100; const cls=Math.abs(ch)<2?"p-none":ch>0?"p-alta":"p-down"; const txt=(ch>=0?"+":"−")+Math.abs(ch).toFixed(1).replace(".",",")+"%"; return `<span class="pill ${cls}">${txt}</span> `; };
   let tokens=[], redes=[], meta=null;
   const st={q:"",rede:"all",recent:false,sort:"ultima_utc",dir:"desc",excl:false};
 
@@ -211,8 +218,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     rows.sort((a,b)=>{ if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
-    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="11" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
-    if(!rows.length){ tb.innerHTML=`<tr><td colspan="11" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="14" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="14" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
@@ -226,7 +233,10 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="num">${fmtN(t.compras)}</td>
         <td class="num">${fmtU(t.compras_usdc,t.aprox)}</td>
         <td class="num">${fmtN(t.vendas)}</td>
-        <td class="num">${fmtU(t.vendas_usdc,t.aprox)}</td></tr>`;
+        <td class="num">${fmtU(t.vendas_usdc,t.aprox)}</td>
+        <td class="num"${t.data_compra?` title="${esc(t.data_compra)} UTC"`:""}>${fmtP(t.preco_compra)}</td>
+        <td class="num"${t.data_venda?` title="${esc(t.data_venda)} UTC"`:""}>${fmtP(t.preco_venda)}</td>
+        <td class="desc">${tendencia(t)}${t.descricao?esc(t.descricao):'<span style="opacity:.6">—</span>'}</td></tr>`;
     }).join("");
   }
 
@@ -283,7 +293,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       const [t,r,m]=await Promise.all([get("data/tokens.json"),get("data/redes.json"),get("data/meta.json").catch(()=>null)]);
       tokens=Array.isArray(t.itens)?t.itens:[]; redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
-      $("tb-tok").innerHTML=`<tr><td colspan="11" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-tok").innerHTML=`<tr><td colspan="14" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
       $("tb-net").innerHTML=`<tr><td colspan="8" class="empty">Não foi possível carregar os dados.</td></tr>`;
     }
   })();
