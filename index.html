@@ -63,6 +63,10 @@ th button[data-dir]::after{content:" ↓";color:var(--accent)}
 th button[data-dir=asc]::after{content:" ↑"}
 .sym{font-weight:600}
 .roi{font-weight:600}.roi.up{color:var(--ok)}.roi.down{color:var(--warn)}
+.ctr,td.ctr{text-align:center}
+.dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle}
+.dot.g{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
+.dot.r{background:#c8402f;box-shadow:0 0 0 3px var(--warn-soft)}
 td.desc{white-space:normal;min-width:280px;max-width:420px;font-size:13px}
 .p-down{background:var(--warn-soft);color:var(--warn)}
 td.copycell{text-align:center}
@@ -132,16 +136,16 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
     <div class="tbl ten" id="wrap-tok">
       <table>
         <thead><tr>
           <th><button type="button" data-sort="simbolo">Token</button></th>
-          <th>Nome</th>
           <th class="num"><button type="button" data-sort="roi">ROI</button></th>
           <th>Contrato</th>
           <th>DexScreener</th>
           <th><button type="button" data-sort="lancamento_utc">Data Lanc.</button></th>
+          <th class="ctr"><button type="button" data-sort="insider">Insider</button></th>
           <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
           <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
           <th class="num"><button type="button" data-sort="compras">Total Compras</button></th>
@@ -195,6 +199,11 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   const fmtP=v=>{ if(!isNum(v)) return '<span style="opacity:.6">—</span>'; let d; if(v>=1000) d=0; else if(v>=1) d=4; else d=Math.max(4,-Math.floor(Math.log10(v))+3); return "$ "+new Intl.NumberFormat("pt-PT",{minimumFractionDigits:0,maximumFractionDigits:Math.min(d,20)}).format(v); };
   const roi=t=>(isNum(t.preco_compra)&&isNum(t.preco_venda)&&t.preco_compra>0)?(t.preco_venda/t.preco_compra-1)*100:null;
   const fmtRoi=t=>{const r=roi(t); if(r===null) return '<span style="opacity:.6">—</span>'; const c=Math.abs(r)<2?"":r>0?"up":"down"; return `<span class="roi ${c}">${r>=0?"+":"−"}${new Intl.NumberFormat("pt-PT",{minimumFractionDigits:1,maximumFractionDigits:1}).format(Math.abs(r))}%</span>`;};
+  // Insider: 1.ª compra das redes menos de 1 hora depois do lançamento (criação da 1.ª pool)
+  const insiderH=t=>{ const a=parseUTC(t.data_compra||t.primeira_utc), b=parseUTC(t.lancamento_utc); return (isFinite(a)&&isFinite(b))?(a-b)/3600e3:null; };
+  const fmtInsider=t=>{ const h=insiderH(t); if(h===null) return '<span style="opacity:.6">—</span>'; const yes=h<1;
+    const txt=h<1?(h<0?"1.ª compra antes da 1.ª pool indexada":`1.ª compra ${Math.max(0,Math.round(h*60))} min após o lançamento`):(h<48?`1.ª compra ${h.toFixed(1).replace(".",",")} h após o lançamento`:`1.ª compra ${Math.round(h/24)} dias após o lançamento`);
+    return `<span class="dot ${yes?"g":"r"}" role="img" aria-label="${yes?"Sim":"Não"}" title="${txt}"></span>`; };
   const tendencia=t=>{ if(!isNum(t.preco_compra)||!isNum(t.preco_venda)) return ""; const ch=(t.preco_venda/t.preco_compra-1)*100; const cls=Math.abs(ch)<2?"p-none":ch>0?"p-alta":"p-down"; const txt=(ch>=0?"+":"−")+Math.abs(ch).toFixed(1).replace(".",",")+"%"; return `<span class="pill ${cls}">${txt}</span> `; };
   let tokens=[], redes=[], meta=null;
   const st={q:"",rede:"all",recent:false,sort:"ultima_utc",dir:"desc",excl:false};
@@ -225,7 +234,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     });
     const k=st.sort, d=st.dir==="asc"?1:-1;
     const numK=["compras","compras_usdc","vendas","vendas_usdc"].includes(k);
-    rows.sort((a,b)=>{ if(k==="roi"){const x=roi(a),y=roi(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
+    rows.sort((a,b)=>{ if(k==="insider"){const x=insiderH(a),y=insiderH(b); const xa=x===null?1e9:x, ya=y===null?1e9:y; return (xa-ya)*d;}
+      if(k==="roi"){const x=roi(a),y=roi(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
       if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
@@ -234,12 +244,12 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
-        <td><span class="sym">${esc(t.simbolo)}</span>${(t.contrato||"").toLowerCase()==="0xe254ee6b463807b6f8040797ccd909f5ecddb9d6"?' <span class="pill p-new">origem</span>':""}</td>
-        <td class="nm" title="${esc(t.nome)}">${t.nome?esc(t.nome):'<span style="opacity:.6">—</span>'}</td>
+        <td><span class="sym" title="${esc(t.nome||t.simbolo)}">${esc(t.simbolo)}</span>${(t.contrato||"").toLowerCase()==="0xe254ee6b463807b6f8040797ccd909f5ecddb9d6"?' <span class="pill p-new">origem</span>':""}</td>
         <td class="num">${fmtRoi(t)}</td>
         <td class="copycell"><button type="button" class="copy" data-addr="${esc(t.contrato)}" title="Copiar ${esc(t.contrato)}" aria-label="Copiar contrato de ${esc(t.simbolo)}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="ok" hidden>Copiado</span></button></td>
         <td><a class="chart" href="https://dexscreener.com/bsc/${esc(t.contrato)}" target="_blank" rel="noopener" title="Abrir gráfico de ${esc(t.simbolo)} no DexScreener">Gráfico ↗</a></td>
         <td class="mono"${t.lancamento_utc?` title="Criação da 1.ª pool na BSC (GeckoTerminal)"`:""}>${t.lancamento_utc?esc(t.lancamento_utc):'<span style="opacity:.6">—</span>'}</td>
+        <td class="ctr">${fmtInsider(t)}</td>
         <td class="mono">${esc(t.primeira_utc)}</td>
         <td class="mono">${esc(t.ultima_utc)}</td>
         <td class="num">${fmtN(t.compras)}</td>
@@ -305,7 +315,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   $("f-excl").addEventListener("change",e=>{st.excl=e.target.checked;renderRedes();});
   document.querySelectorAll("th button[data-sort]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.sort;
-    if(st.sort===k) st.dir=st.dir==="asc"?"desc":"asc"; else {st.sort=k; st.dir=k==="simbolo"?"asc":"desc";}
+    if(st.sort===k) st.dir=st.dir==="asc"?"desc":"asc"; else {st.sort=k; st.dir=(k==="simbolo"||k==="insider")?"asc":"desc";}
     document.querySelectorAll("th button[data-sort]").forEach(x=>{ if(x.dataset.sort===st.sort) x.dataset.dir=st.dir; else delete x.dataset.dir; });
     renderTokens();
   }));
