@@ -146,6 +146,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num"><button type="button" data-sort="roi">ROI</button></th>
           <th>Contrato</th>
           <th>DexScreener</th>
+          <th class="num"><button type="button" data-sort="dias">Dias</button></th>
           <th><button type="button" data-sort="lancamento_utc">Data Lanc.</button></th>
           <th class="ctr"><button type="button" data-sort="insider">Insider</button></th>
           <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
@@ -159,7 +160,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th>Descrição</th>
           <th>Redes</th>
         </tr></thead>
-        <tbody id="tb-tok"><tr><td colspan="16" class="empty">A carregar tokens…</td></tr></tbody>
+        <tbody id="tb-tok"><tr><td colspan="17" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -183,6 +184,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   const fmtN=v=>isNum(v)?nf0.format(v):'<span style="opacity:.6">—</span>';
   const fmtU=(v,ap)=>isNum(v)?(ap?'<span title="Inclui valor convertido de WBNB">≈ </span>':'')+nf0.format(v):'<span style="opacity:.6">—</span>';
   const fmtP=v=>{ if(!isNum(v)) return '<span style="opacity:.6">—</span>'; let d; if(v>=1000) d=0; else if(v>=1) d=4; else d=Math.max(4,-Math.floor(Math.log10(v))+3); return "$ "+new Intl.NumberFormat("pt-PT",{minimumFractionDigits:0,maximumFractionDigits:Math.min(d,20)}).format(v); };
+  // Dias: diferença inteira entre a data de hoje (UTC) e a data de lançamento
+  const diasLanc=t=>{ const b=parseUTC((t.lancamento_utc||"").slice(0,10)); if(!isFinite(b)) return null; const n=new Date(); return Math.round((Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-b)/864e5); };
   const roi=t=>(isNum(t.preco_compra)&&isNum(t.preco_venda)&&t.preco_compra>0)?(t.preco_venda/t.preco_compra-1)*100:null;
   const fmtRoi=t=>{const r=roi(t); if(r===null) return '<span style="opacity:.6">—</span>'; const c=Math.abs(r)<2?"":r>0?"up":"down"; return `<span class="roi ${c}">${r>=0?"+":"−"}${new Intl.NumberFormat("pt-PT",{minimumFractionDigits:1,maximumFractionDigits:1}).format(Math.abs(r))}%</span>`;};
   // Insider: 1.ª compra das redes menos de 1 hora depois do lançamento (criação da 1.ª pool)
@@ -221,12 +224,13 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     const k=st.sort, d=st.dir==="asc"?1:-1;
     const numK=["compras","compras_usdc","vendas","vendas_usdc"].includes(k);
     rows.sort((a,b)=>{ if(k==="insider"){const x=insiderH(a),y=insiderH(b); const xa=x===null?1e9:x, ya=y===null?1e9:y; return (xa-ya)*d;}
+      if(k==="dias"){const x=diasLanc(a),y=diasLanc(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
       if(k==="roi"){const x=roi(a),y=roi(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
       if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
-    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="16" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
-    if(!rows.length){ tb.innerHTML=`<tr><td colspan="16" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="17" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="17" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
@@ -234,6 +238,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="num">${fmtRoi(t)}</td>
         <td class="copycell"><button type="button" class="copy" data-addr="${esc(t.contrato)}" title="Copiar ${esc(t.contrato)}" aria-label="Copiar contrato de ${esc(t.simbolo)}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="ok" hidden>Copiado</span></button></td>
         <td><a class="chart" href="https://dexscreener.com/bsc/${esc(t.contrato)}" target="_blank" rel="noopener" title="Abrir gráfico de ${esc(t.simbolo)} no DexScreener">Gráfico ↗</a></td>
+        <td class="num"${diasLanc(t)!==null?` title="Dias desde o lançamento (${esc(t.lancamento_utc)} UTC) até hoje"`:""}>${diasLanc(t)!==null?nf0.format(diasLanc(t)):'<span style="opacity:.6">—</span>'}</td>
         <td class="mono"${t.lancamento_utc?` title="Criação da 1.ª pool na BSC (GeckoTerminal)"`:""}>${t.lancamento_utc?esc(t.lancamento_utc):'<span style="opacity:.6">—</span>'}</td>
         <td class="ctr">${fmtInsider(t)}</td>
         <td class="mono">${esc(t.primeira_utc)}</td>
@@ -272,7 +277,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   $("f-recent").addEventListener("change",e=>{st.recent=e.target.checked;renderTokens();});
   document.querySelectorAll("th button[data-sort]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.sort;
-    if(st.sort===k) st.dir=st.dir==="asc"?"desc":"asc"; else {st.sort=k; st.dir=(k==="simbolo"||k==="insider")?"asc":"desc";}
+    if(st.sort===k) st.dir=st.dir==="asc"?"desc":"asc"; else {st.sort=k; st.dir=(k==="simbolo"||k==="insider"||k==="dias")?"asc":"desc";}
     document.querySelectorAll("th button[data-sort]").forEach(x=>{ if(x.dataset.sort===st.sort) x.dataset.dir=st.dir; else delete x.dataset.dir; });
     renderTokens();
   }));
@@ -288,7 +293,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         // Regra do volume mínimo: total de compras ≥ 2000 USDC (ou equivalente)
         .filter(x=>(isNum(x.compras_usdc)?x.compras_usdc:0)>=((m&&m.compras_min_usdc)||2000)); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
-      $("tb-tok").innerHTML=`<tr><td colspan="16" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-tok").innerHTML=`<tr><td colspan="17" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
     }
   })();
 })();
