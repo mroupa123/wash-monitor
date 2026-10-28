@@ -162,22 +162,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     </div>
   </section>
 
-  <section aria-labelledby="h-net">
-    <div class="sec-head">
-      <h2 id="h-net">Redes conhecidas <small id="net-count"></small></h2>
-      <div class="controls">
-        <label class="chk"><input type="checkbox" id="f-excl"> Mostrar excluídos (routers, plataformas, MM)</label>
-      </div>
-    </div>
-    <div class="tbl">
-      <table>
-        <thead><tr>
-          <th>Grupo</th><th>Contrato</th><th>Papel</th><th>Carteiras EOA</th><th>Tokens vistos</th><th>1.ª deteção</th><th>Certeza</th><th>Notas</th>
-        </tr></thead>
-        <tbody id="tb-net"><tr><td colspan="8" class="empty">A carregar redes…</td></tr></tbody>
-      </table>
-    </div>
-  </section>
 
   <footer id="foot">Fonte: análise on-chain do token KTI (BSC). Dados atualizados diariamente.</footer>
 </div>
@@ -263,38 +247,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     }).join("");
   }
 
-  function addrBlock(list,label){
-    if(!list.length) return "";
-    if(list.length===1) return scanAddr(list[0]);
-    return `<details><summary>${list.length} ${label}</summary><div class="addrlist">${list.map(scanAddr).join("")}</div></details>`;
-  }
-  function notesCell(n){
-    if(!n) return '<span style="opacity:.6">—</span>';
-    const html=esc(n).replace(/0x[0-9a-fA-F]{40}/g,a=>scanAddr(a));
-    if(n.length<=90) return html;
-    return `<details><summary>${esc(n.slice(0,60).replace(/0x[0-9a-fA-F]+$/,""))}…</summary><div>${html}</div></details>`;
-  }
-
-  function renderRedes(){
-    const rows=redes.filter(r=>st.excl||!r.excluir).sort((a,b)=>(a.ordem||0)-(b.ordem||0));
-    $("net-count").textContent = `${redes.filter(r=>!r.excluir).length} wash · ${redes.filter(r=>r.excluir).length} excluídos`;
-    const tb=$("tb-net");
-    if(!redes.length){ tb.innerHTML=`<tr><td colspan="8" class="empty">Ainda sem redes registadas.</td></tr>`; return; }
-    tb.innerHTML=rows.map(r=>{
-      const cert=r.certeza||"";
-      return `<tr class="${r.excluir?"excl":""}">
-        <td><b>${esc(r.grupo)}</b></td>
-        <td>${addrBlock(r.contratos||[],"contratos")}</td>
-        <td>${esc(r.papel)}</td>
-        <td>${(r.carteiras&&r.carteiras.length)?addrBlock(r.carteiras,"carteiras"):esc(r.carteiras_texto||"—")}</td>
-        <td>${(r.tokens||[]).length?esc(r.tokens.join(", ")):"—"}</td>
-        <td class="mono">${esc(r.primeira_utc||"—")}</td>
-        <td>${cert?`<span class="pill p-${esc(cert)}">${esc(cert)}</span>`:"—"}</td>
-        <td class="wrapcell">${notesCell(r.notas)}</td></tr>`;
-    }).join("");
-  }
-
-  function renderAll(){ renderStatus(); renderTokens(); renderRedes(); }
+  function renderAll(){ renderStatus(); renderTokens(); }
   // Mostrar 10 linhas de cada vez; as restantes com scroll dentro da tabela
   function fitTen(){ const w=$("wrap-tok"); if(!w) return; const rows=$("tb-tok").rows; const th=w.querySelector("thead");
     if(rows.length<=10){ w.style.maxHeight=""; return; }
@@ -312,7 +265,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   $("f-rede").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;st.rede=b.dataset.v;
     for(const x of $("f-rede").children) x.setAttribute("aria-pressed",x===b?"true":"false"); renderTokens();});
   $("f-recent").addEventListener("change",e=>{st.recent=e.target.checked;renderTokens();});
-  $("f-excl").addEventListener("change",e=>{st.excl=e.target.checked;renderRedes();});
   document.querySelectorAll("th button[data-sort]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.sort;
     if(st.sort===k) st.dir=st.dir==="asc"?"desc":"asc"; else {st.sort=k; st.dir=(k==="simbolo"||k==="insider")?"asc":"desc";}
@@ -332,7 +284,6 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         .filter(x=>(isNum(x.compras_usdc)?x.compras_usdc:0)>=((m&&m.compras_min_usdc)||2000)); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
       $("tb-tok").innerHTML=`<tr><td colspan="16" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
-      $("tb-net").innerHTML=`<tr><td colspan="8" class="empty">Não foi possível carregar os dados.</td></tr>`;
     }
   })();
 })();
