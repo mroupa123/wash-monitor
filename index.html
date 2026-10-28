@@ -87,6 +87,8 @@ a.addr:hover{color:var(--accent);border-color:var(--accent)}
 .p-r1{background:var(--r1-soft);color:var(--r1)}
 .p-r2{background:var(--r2-soft);color:var(--r2)}
 .p-new{background:var(--accent-soft);color:var(--accent)}
+.p-bnb{background:var(--accent-soft);color:var(--accent)}
+.p-btc{background:var(--r2-soft);color:var(--r2)}
 .p-alta{background:var(--ok-soft);color:var(--ok)}
 .p-media-alta,.p-media{background:var(--warn-soft);color:var(--warn)}
 .p-none{background:var(--mute-soft);color:var(--muted)}
@@ -156,7 +158,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num">Valor Token 1.ª Compra</th>
           <th class="num">Valor Token Última Venda</th>
           <th>Descrição</th>
-          <th>Redes</th>
+          <th><button type="button" data-sort="rede_origem">Rede</button></th>
         </tr></thead>
         <tbody id="tb-tok"><tr><td colspan="15" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
@@ -197,6 +199,9 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
 
   function refMs(){ let m=-Infinity; for(const t of tokens){const v=parseUTC(t.ultima_utc); if(v>m) m=v;} return m; }
   function isRecent(t,ref){ return ref-parseUTC(t.ultima_utc) <= 24*3600e3; }
+  // Rede (blockchain) onde o token foi criado; por omissão BNB, porque a monitorização é na BSC
+  function redeOrigem(t){ const r=(t.rede_origem||"BNB").toUpperCase(); const c=r==="BNB"?"p-bnb":r==="ETH"?"p-r1":r==="BTC"?"p-btc":"p-none";
+    return `<span class="pill ${c}" title="${r==="BNB"?"Token criado na BNB Chain":"Token criado na rede "+esc(r)+" e trazido para a BSC por ponte"}">Rede ${esc(r)}</span>`; }
   function redePills(arr){ return `<div class="pills">${(arr||[]).map(r=>`<span class="pill ${r==="Rede 1"?"p-r1":r==="Rede 2"?"p-r2":"p-none"}">${esc(r)}</span>`).join("")}</div>`; }
 
   function renderStatus(){
@@ -246,7 +251,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="num"${t.data_compra?` title="${esc(t.data_compra)} UTC"`:""}>${fmtP(t.preco_compra)}</td>
         <td class="num"${t.data_venda?` title="${esc(t.data_venda)} UTC"`:""}>${fmtP(t.preco_venda)}</td>
         <td class="desc">${t.descricao?esc(t.descricao):'<span style="opacity:.6">—</span>'}</td>
-        <td>${redePills(t.redes)}</td></tr>`;
+        <td>${redeOrigem(t)}</td></tr>`;
     }).join("");
   }
 
