@@ -132,7 +132,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
     <div class="tbl ten" id="wrap-tok">
       <table>
         <thead><tr>
@@ -141,6 +141,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num"><button type="button" data-sort="roi">ROI</button></th>
           <th>Contrato</th>
           <th>DexScreener</th>
+          <th><button type="button" data-sort="lancamento_utc">Data Lanc.</button></th>
           <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
           <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
           <th class="num"><button type="button" data-sort="compras">Total Compras</button></th>
@@ -152,7 +153,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th>Descrição</th>
           <th>Redes</th>
         </tr></thead>
-        <tbody id="tb-tok"><tr><td colspan="15" class="empty">A carregar tokens…</td></tr></tbody>
+        <tbody id="tb-tok"><tr><td colspan="16" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -228,8 +229,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
-    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="15" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
-    if(!rows.length){ tb.innerHTML=`<tr><td colspan="15" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="16" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="16" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
@@ -238,6 +239,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="num">${fmtRoi(t)}</td>
         <td class="copycell"><button type="button" class="copy" data-addr="${esc(t.contrato)}" title="Copiar ${esc(t.contrato)}" aria-label="Copiar contrato de ${esc(t.simbolo)}"><svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><rect x="9" y="9" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10" fill="none" stroke="currentColor" stroke-width="2"/></svg><span class="ok" hidden>Copiado</span></button></td>
         <td><a class="chart" href="https://dexscreener.com/bsc/${esc(t.contrato)}" target="_blank" rel="noopener" title="Abrir gráfico de ${esc(t.simbolo)} no DexScreener">Gráfico ↗</a></td>
+        <td class="mono"${t.lancamento_utc?` title="Criação da 1.ª pool na BSC (GeckoTerminal)"`:""}>${t.lancamento_utc?esc(t.lancamento_utc):'<span style="opacity:.6">—</span>'}</td>
         <td class="mono">${esc(t.primeira_utc)}</td>
         <td class="mono">${esc(t.ultima_utc)}</td>
         <td class="num">${fmtN(t.compras)}</td>
@@ -315,7 +317,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       const [t,r,m]=await Promise.all([get("data/tokens.json"),get("data/redes.json"),get("data/meta.json").catch(()=>null)]);
       tokens=Array.isArray(t.itens)?t.itens:[]; redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
-      $("tb-tok").innerHTML=`<tr><td colspan="15" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-tok").innerHTML=`<tr><td colspan="16" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
       $("tb-net").innerHTML=`<tr><td colspan="8" class="empty">Não foi possível carregar os dados.</td></tr>`;
     }
   })();
