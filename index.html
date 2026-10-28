@@ -62,6 +62,9 @@ th button{font:inherit;color:inherit;letter-spacing:inherit;text-transform:inher
 th button[data-dir]::after{content:" ↓";color:var(--accent)}
 th button[data-dir=asc]::after{content:" ↑"}
 .sym{font-weight:600}
+td.addrfull{user-select:all;color:var(--muted)}
+a.chart{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+a.chart:hover{text-decoration:underline}
 th.num,td.num{text-align:right}
 td.num{font-family:var(--f-mono);font-size:12.5px}
 .nm{color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis}
@@ -121,13 +124,14 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · contrato abre no BscScan</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · "Gráfico" abre o par no DexScreener</span><span>Compras e vendas das Redes 1 e 2, acumuladas desde o início; USDC = valor em stablecoins (≈ inclui WBNB convertido)</span></div>
     <div class="tbl">
       <table>
         <thead><tr>
           <th><button type="button" data-sort="simbolo">Token</button></th>
           <th>Nome</th>
           <th>Contrato</th>
+          <th>DexScreener</th>
           <th>Redes</th>
           <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
           <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
@@ -136,7 +140,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th class="num"><button type="button" data-sort="vendas">Total Vendas</button></th>
           <th class="num"><button type="button" data-sort="vendas_usdc">Vendas USDC</button></th>
         </tr></thead>
-        <tbody id="tb-tok"><tr><td colspan="10" class="empty">A carregar tokens…</td></tr></tbody>
+        <tbody id="tb-tok"><tr><td colspan="11" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -207,14 +211,15 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     rows.sort((a,b)=>{ if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
-    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="10" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
-    if(!rows.length){ tb.innerHTML=`<tr><td colspan="10" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="11" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="11" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
         <td><span class="sym">${esc(t.simbolo)}</span>${(t.contrato||"").toLowerCase()==="0xe254ee6b463807b6f8040797ccd909f5ecddb9d6"?' <span class="pill p-new">origem</span>':""}</td>
         <td class="nm" title="${esc(t.nome)}">${t.nome?esc(t.nome):'<span style="opacity:.6">—</span>'}</td>
-        <td>${scanTok(t.contrato)}</td>
+        <td class="mono addrfull">${esc(t.contrato)}</td>
+        <td><a class="chart" href="https://dexscreener.com/bsc/${esc(t.contrato)}" target="_blank" rel="noopener" title="Abrir gráfico de ${esc(t.simbolo)} no DexScreener">Gráfico ↗</a></td>
         <td>${redePills(t.redes)}</td>
         <td class="mono">${esc(t.primeira_utc)}</td>
         <td class="mono">${esc(t.ultima_utc)}</td>
@@ -278,7 +283,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       const [t,r,m]=await Promise.all([get("data/tokens.json"),get("data/redes.json"),get("data/meta.json").catch(()=>null)]);
       tokens=Array.isArray(t.itens)?t.itens:[]; redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
-      $("tb-tok").innerHTML=`<tr><td colspan="10" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-tok").innerHTML=`<tr><td colspan="11" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
       $("tb-net").innerHTML=`<tr><td colspan="8" class="empty">Não foi possível carregar os dados.</td></tr>`;
     }
   })();
