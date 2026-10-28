@@ -138,7 +138,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · só tokens com última venda nos últimos 7 dias (incluindo hoje) e compras ≥ 2.000 USDC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Entradas = n.º de compras das Redes 1 e 2, acumuladas desde o início; Total USD = valor dessas compras em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · só tokens lançados há 30 dias ou menos, com última venda nos últimos 7 dias (incluindo hoje) e compras ≥ 2.000 USDC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Entradas = n.º de compras das Redes 1 e 2, acumuladas desde o início; Total USD = valor dessas compras em stablecoins (≈ inclui WBNB convertido)</span></div>
     <div class="tbl ten" id="wrap-tok">
       <table>
         <thead><tr>
@@ -287,7 +287,9 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       const dias=(m&&m.janela_dias)||7, hoje=new Date(), corte=Date.UTC(hoje.getUTCFullYear(),hoje.getUTCMonth(),hoje.getUTCDate()-(dias-1));
       tokens=(Array.isArray(t.itens)?t.itens:[]).filter(x=>{ const v=parseUTC(x.data_venda||x.ultima_utc); return !isFinite(v)||v>=corte; })
         // Regra do volume mínimo: total de compras ≥ 2000 USDC (ou equivalente)
-        .filter(x=>(isNum(x.compras_usdc)?x.compras_usdc:0)>=((m&&m.compras_min_usdc)||2000)); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
+        .filter(x=>(isNum(x.compras_usdc)?x.compras_usdc:0)>=((m&&m.compras_min_usdc)||2000))
+        // Regra do lançamento: só tokens lançados há 30 dias ou menos
+        .filter(x=>{ const n=diasLanc(x); return n===null||n<=((m&&m.lancamento_max_dias)||30); }); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
     }catch(e){
       $("tb-tok").innerHTML=`<tr><td colspan="15" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
     }
