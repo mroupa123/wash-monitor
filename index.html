@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="pt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Monitor Wash KTI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: ledger page — status strip, then two sortable registers (tokens, redes) */
+:root{
+  --bg:#f5f6f8; --surface:#ffffff; --ink:#151a24; --muted:#5d6676; --line:#dfe3ea; --row:#f0f2f6;
+  --accent:#b47a00; --accent-soft:#fbefd2;
+  --r1:#2f5fb3; --r1-soft:#e3ebf8; --r2:#8a3fa0; --r2-soft:#f1e5f5;
+  --ok:#1e7a4c; --ok-soft:#dff1e7; --warn:#a1580d; --warn-soft:#f8e8d6; --mute-soft:#eceef2;
+  --f-display:"Archivo","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#10131a; --surface:#171b24; --ink:#e7eaf0; --muted:#99a2b3; --line:#2a303d; --row:#1d222d;
+  --accent:#f0b23a; --accent-soft:#3a2c0e;
+  --r1:#8fb0ec; --r1-soft:#1d2a44; --r2:#d39ae4; --r2-soft:#33203b;
+  --ok:#6fd3a0; --ok-soft:#173528; --warn:#f0a75e; --warn-soft:#3a2614; --mute-soft:#232834; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#10131a; --surface:#171b24; --ink:#e7eaf0; --muted:#99a2b3; --line:#2a303d; --row:#1d222d;
+  --accent:#f0b23a; --accent-soft:#3a2c0e;
+  --r1:#8fb0ec; --r1-soft:#1d2a44; --r2:#d39ae4; --r2-soft:#33203b;
+  --ok:#6fd3a0; --ok-soft:#173528; --warn:#f0a75e; --warn-soft:#3a2614; --mute-soft:#232834; color-scheme:dark}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:14px;line-height:1.45}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;gap:28px}
+header{display:grid;gap:10px}
+.eyebrow{font-family:var(--f-mono);font-size:12px;color:var(--muted);letter-spacing:.04em}
+.eyebrow b{color:var(--accent);font-weight:500}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(26px,4vw,38px);line-height:1.08;margin:0;text-wrap:balance;letter-spacing:-.01em}
+.lede{color:var(--muted);max-width:68ch;margin:0}
+.status{display:flex;flex-wrap:wrap;gap:10px 28px;align-items:baseline;border-top:2px solid var(--ink);border-bottom:1px solid var(--line);padding-block:12px}
+.stat{display:grid;gap:2px}
+.stat .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+.stat .v{font-family:var(--f-display);font-weight:700;font-size:22px;font-variant-numeric:tabular-nums}
+.stat .v.small{font-family:var(--f-mono);font-weight:500;font-size:14px}
+.stat .v .live{color:var(--accent)}
+section{display:grid;gap:12px;min-width:0}
+.sec-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:end;justify-content:space-between}
+h2{font-family:var(--f-display);font-weight:700;font-size:20px;margin:0}
+h2 small{font-family:var(--f-body);font-weight:400;font-size:13px;color:var(--muted);margin-left:6px}
+.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.controls input[type=search]{font:inherit;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);min-width:0;width:220px;max-width:100%}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;background:var(--surface)}
+.seg button{font:inherit;font-size:13px;border:0;background:none;color:var(--muted);padding:6px 10px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed=true]{background:var(--ink);color:var(--surface)}
+label.chk{display:inline-flex;gap:6px;align-items:center;font-size:13px;color:var(--muted);cursor:pointer}
+button:focus-visible,input:focus-visible,a:focus-visible,summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tbl{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:8px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top;white-space:nowrap}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--row)}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;position:sticky;top:0;background:var(--surface)}
+th button{font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;background:none;border:0;padding:0;cursor:pointer}
+th button[data-dir]::after{content:" ↓";color:var(--accent)}
+th button[data-dir=asc]::after{content:" ↑"}
+.sym{font-weight:600}
+.nm{color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis}
+.mono{font-family:var(--f-mono);font-size:12.5px}
+a.addr{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--muted)}
+a.addr:hover{color:var(--accent);border-color:var(--accent)}
+.pill{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 7px;border-radius:999px;line-height:1.5}
+.p-r1{background:var(--r1-soft);color:var(--r1)}
+.p-r2{background:var(--r2-soft);color:var(--r2)}
+.p-new{background:var(--accent-soft);color:var(--accent)}
+.p-alta{background:var(--ok-soft);color:var(--ok)}
+.p-media-alta,.p-media{background:var(--warn-soft);color:var(--warn)}
+.p-none{background:var(--mute-soft);color:var(--muted)}
+.pills{display:flex;gap:4px;flex-wrap:nowrap}
+tr.recent td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+tr.excl td{color:var(--muted)}
+td.wrapcell{white-space:normal;min-width:220px;max-width:420px}
+details summary{cursor:pointer;color:var(--muted);font-size:12.5px}
+details[open] summary{margin-bottom:4px}
+.addrlist{display:grid;gap:2px}
+.empty{padding:28px 16px;color:var(--muted);text-align:center}
+.legend{display:flex;flex-wrap:wrap;gap:6px 18px;font-size:12.5px;color:var(--muted)}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.sw{width:3px;height:14px;background:var(--accent);display:inline-block}
+footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+@media (max-width:560px){.controls input[type=search]{width:100%}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="eyebrow">BSC · BEP-20 · origem <b>KTI 0xe254…b9d6</b></div>
+    <h1>Monitor de wash trading das redes do KTI</h1>
+    <p class="lede">Tokens em que as redes de wash trading identificadas no KTI estão a operar, e o registo dessas redes. Atualizado todos os dias às 10:00 (Lisboa).</p>
+    <div class="status" id="status">
+      <div class="stat"><span class="k">Última atualização (UTC)</span><span class="v small" id="s-upd">—</span></div>
+      <div class="stat"><span class="k">Tokens</span><span class="v" id="s-tok">—</span></div>
+      <div class="stat"><span class="k">Ativos 24 h</span><span class="v"><span class="live" id="s-act">—</span></span></div>
+      <div class="stat"><span class="k">Em ambas as redes</span><span class="v" id="s-both">—</span></div>
+      <div class="stat"><span class="k">Redes / grupos wash</span><span class="v" id="s-net">—</span></div>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-tok">
+    <div class="sec-head">
+      <h2 id="h-tok">Tokens operados <small id="tok-count"></small></h2>
+      <div class="controls">
+        <input type="search" id="q-tok" placeholder="Símbolo, nome ou contrato" aria-label="Pesquisar tokens">
+        <div class="seg" role="group" aria-label="Filtrar por rede" id="f-rede">
+          <button type="button" data-v="all" aria-pressed="true">Todas</button>
+          <button type="button" data-v="Rede 1" aria-pressed="false">Rede 1</button>
+          <button type="button" data-v="Rede 2" aria-pressed="false">Rede 2</button>
+          <button type="button" data-v="both" aria-pressed="false">Ambas</button>
+        </div>
+        <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
+      </div>
+    </div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · contrato abre no BscScan</span></div>
+    <div class="tbl">
+      <table>
+        <thead><tr>
+          <th><button type="button" data-sort="simbolo">Token</button></th>
+          <th>Nome</th>
+          <th>Contrato</th>
+          <th>Redes</th>
+          <th><button type="button" data-sort="primeira_utc">1.ª operação</button></th>
+          <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
+        </tr></thead>
+        <tbody id="tb-tok"><tr><td colspan="6" class="empty">A carregar tokens…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-net">
+    <div class="sec-head">
+      <h2 id="h-net">Redes conhecidas <small id="net-count"></small></h2>
+      <div class="controls">
+        <label class="chk"><input type="checkbox" id="f-excl"> Mostrar excluídos (routers, plataformas, MM)</label>
+      </div>
+    </div>
+    <div class="tbl">
+      <table>
+        <thead><tr>
+          <th>Grupo</th><th>Contrato</th><th>Papel</th><th>Carteiras EOA</th><th>Tokens vistos</th><th>1.ª deteção</th><th>Certeza</th><th>Notas</th>
+        </tr></thead>
+        <tbody id="tb-net"><tr><td colspan="8" class="empty">A carregar redes…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer id="foot">Fonte: análise on-chain do token KTI (BSC). Dados atualizados diariamente.</footer>
+</div>
+
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const short=a=>a&&a.length>14?a.slice(0,6)+"…"+a.slice(-4):a;
+  const isAddr=s=>/^0x[0-9a-fA-F]{40}$/.test(s);
+  const scanAddr=a=>`<a class="addr mono" href="https://bscscan.com/address/${esc(a)}" target="_blank" rel="noopener" title="${esc(a)}">${esc(short(a))}</a>`;
+  const scanTok=a=>`<a class="addr mono" href="https://bscscan.com/token/${esc(a)}" target="_blank" rel="noopener" title="${esc(a)}">${esc(short(a))}</a>`;
+  const parseUTC=s=>{ if(!s) return NaN; const m=s.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/); if(!m) return NaN; return Date.UTC(+m[1],+m[2]-1,+m[3],+(m[4]||0),+(m[5]||0)); };
+
+  let tokens=[], redes=[], meta=null;
+  const st={q:"",rede:"all",recent:false,sort:"ultima_utc",dir:"desc",excl:false};
+
+  function refMs(){ let m=-Infinity; for(const t of tokens){const v=parseUTC(t.ultima_utc); if(v>m) m=v;} return m; }
+  function isRecent(t,ref){ return ref-parseUTC(t.ultima_utc) <= 24*3600e3; }
+  function redePills(arr){ return `<div class="pills">${(arr||[]).map(r=>`<span class="pill ${r==="Rede 1"?"p-r1":r==="Rede 2"?"p-r2":"p-none"}">${esc(r)}</span>`).join("")}</div>`; }
+
+  function renderStatus(){
+    const ref=refMs();
+    $("s-upd").textContent = meta&&meta.atualizado_utc ? meta.atualizado_utc : "—";
+    $("s-tok").textContent = tokens.length || "—";
+    $("s-act").textContent = tokens.length ? tokens.filter(t=>isRecent(t,ref)).length : "—";
+    $("s-both").textContent = tokens.length ? tokens.filter(t=>(t.redes||[]).length>1).length : "—";
+    const wash=redes.filter(r=>!r.excluir).length;
+    $("s-net").textContent = redes.length ? wash : "—";
+  }
+
+  function renderTokens(){
+    const ref=refMs(), q=st.q.trim().toLowerCase();
+    let rows=tokens.filter(t=>{
+      const rs=t.redes||[];
+      if(st.rede==="both"&&rs.length<2) return false;
+      if(st.rede!=="all"&&st.rede!=="both"&&!rs.includes(st.rede)) return false;
+      if(st.recent&&!isRecent(t,ref)) return false;
+      if(q&&!((t.simbolo||"")+" "+(t.nome||"")+" "+(t.contrato||"")).toLowerCase().includes(q)) return false;
+      return true;
+    });
+    const k=st.sort, d=st.dir==="asc"?1:-1;
+    rows.sort((a,b)=>{const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
+    $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
+    const tb=$("tb-tok");
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="6" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="6" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    tb.innerHTML=rows.map(t=>{
+      const rec=isRecent(t,ref);
+      return `<tr class="${rec?"recent":""}">
+        <td><span class="sym">${esc(t.simbolo)}</span>${(t.contrato||"").toLowerCase()==="0xe254ee6b463807b6f8040797ccd909f5ecddb9d6"?' <span class="pill p-new">origem</span>':""}</td>
+        <td class="nm" title="${esc(t.nome)}">${t.nome?esc(t.nome):'<span style="opacity:.6">—</span>'}</td>
+        <td>${scanTok(t.contrato)}</td>
+        <td>${redePills(t.redes)}</td>
+        <td class="mono">${esc(t.primeira_utc)}</td>
+        <td class="mono">${esc(t.ultima_utc)}</td></tr>`;
+    }).join("");
+  }
+
+  function addrBlock(list,label){
+    if(!list.length) return "";
+    if(list.length===1) return scanAddr(list[0]);
+    return `<details><summary>${list.length} ${label}</summary><div class="addrlist">${list.map(scanAddr).join("")}</div></details>`;
+  }
+  function notesCell(n){
+    if(!n) return '<span style="opacity:.6">—</span>';
+    const html=esc(n).replace(/0x[0-9a-fA-F]{40}/g,a=>scanAddr(a));
+    if(n.length<=90) return html;
+    return `<details><summary>${esc(n.slice(0,60).replace(/0x[0-9a-fA-F]+$/,""))}…</summary><div>${html}</div></details>`;
+  }
+
+  function renderRedes(){
+    const rows=redes.filter(r=>st.excl||!r.excluir).sort((a,b)=>(a.ordem||0)-(b.ordem||0));
+    $("net-count").textContent = `${redes.filter(r=>!r.excluir).length} wash · ${redes.filter(r=>r.excluir).length} excluídos`;
+    const tb=$("tb-net");
+    if(!redes.length){ tb.innerHTML=`<tr><td colspan="8" class="empty">Ainda sem redes registadas.</td></tr>`; return; }
+    tb.innerHTML=rows.map(r=>{
+      const cert=r.certeza||"";
+      return `<tr class="${r.excluir?"excl":""}">
+        <td><b>${esc(r.grupo)}</b></td>
+        <td>${addrBlock(r.contratos||[],"contratos")}</td>
+        <td>${esc(r.papel)}</td>
+        <td>${(r.carteiras&&r.carteiras.length)?addrBlock(r.carteiras,"carteiras"):esc(r.carteiras_texto||"—")}</td>
+        <td>${(r.tokens||[]).length?esc(r.tokens.join(", ")):"—"}</td>
+        <td class="mono">${esc(r.primeira_utc||"—")}</td>
+        <td>${cert?`<span class="pill p-${esc(cert)}">${esc(cert)}</span>`:"—"}</td>
+        <td class="wrapcell">${notesCell(r.notas)}</td></tr>`;
+    }).join("");
+  }
+
+  function renderAll(){ renderStatus(); renderTokens(); renderRedes(); }
+
+  // Controls
+  $("q-tok").addEventListener("input",e=>{st.q=e.target.value;renderTokens();});
+  $("f-rede").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;st.rede=b.dataset.v;
+    for(const x of $("f-rede").children) x.setAttribute("aria-pressed",x===b?"true":"false"); renderTokens();});
+  $("f-recent").addEventListener("change",e=>{st.recent=e.target.checked;renderTokens();});
+  $("f-excl").addEventListener("change",e=>{st.excl=e.target.checked;renderRedes();});
+  document.querySelectorAll("th button[data-sort]").forEach(b=>b.addEventListener("click",()=>{
+    const k=b.dataset.sort;
+    if(st.sort===k) st.dir=st.dir==="asc"?"desc":"asc"; else {st.sort=k; st.dir=k==="simbolo"?"asc":"desc";}
+    document.querySelectorAll("th button[data-sort]").forEach(x=>{ if(x.dataset.sort===st.sort) x.dataset.dir=st.dir; else delete x.dataset.dir; });
+    renderTokens();
+  }));
+
+  // Data (ficheiros JSON no mesmo repositório)
+  (async()=>{
+    const get=async p=>{const r=await fetch(p+"?v="+Date.now(),{cache:"no-store"}); if(!r.ok) throw new Error(p); return r.json();};
+    try{
+      const [t,r,m]=await Promise.all([get("data/tokens.json"),get("data/redes.json"),get("data/meta.json").catch(()=>null)]);
+      tokens=Array.isArray(t.itens)?t.itens:[]; redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
+    }catch(e){
+      $("tb-tok").innerHTML=`<tr><td colspan="6" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-net").innerHTML=`<tr><td colspan="8" class="empty">Não foi possível carregar os dados.</td></tr>`;
+    }
+  })();
+})();
+</script>
+</body>
+</html>
