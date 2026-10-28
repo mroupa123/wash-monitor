@@ -67,7 +67,7 @@ th button[data-dir=asc]::after{content:" ↑"}
 .dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle}
 .dot.g{background:var(--ok);box-shadow:0 0 0 3px var(--ok-soft)}
 .dot.r{background:#c8402f;box-shadow:0 0 0 3px var(--warn-soft)}
-td.desc{white-space:normal;min-width:280px;max-width:420px;font-size:13px}
+td.desc{white-space:normal;min-width:1120px;max-width:1680px;font-size:13px}
 .p-down{background:var(--warn-soft);color:var(--warn)}
 td.copycell{text-align:center}
 button.copy{display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;background:none;border:1px solid var(--line);border-radius:6px;color:var(--muted);padding:4px 7px;cursor:pointer}
@@ -127,11 +127,13 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       <h2 id="h-tok">Tokens operados <small id="tok-count"></small></h2>
       <div class="controls">
         <input type="search" id="q-tok" placeholder="Símbolo, nome ou contrato" aria-label="Pesquisar tokens">
-        <div class="seg" role="group" aria-label="Filtrar por rede" id="f-rede">
-          <button type="button" data-v="all" aria-pressed="true">Todas</button>
-          <button type="button" data-v="Rede 1" aria-pressed="false">Rede 1</button>
-          <button type="button" data-v="Rede 2" aria-pressed="false">Rede 2</button>
-          <button type="button" data-v="both" aria-pressed="false">Ambas</button>
+        <div class="seg" role="group" aria-label="Filtrar por insider" id="f-ins" title="Clique de novo para limpar o filtro">
+          <button type="button" data-v="yes" aria-pressed="false">Insider</button>
+          <button type="button" data-v="no" aria-pressed="false">Not Insider</button>
+        </div>
+        <div class="seg" role="group" aria-label="Filtrar por ROI" id="f-roi" title="Clique de novo para limpar o filtro">
+          <button type="button" data-v="pos" aria-pressed="false">ROI [+]</button>
+          <button type="button" data-v="neg" aria-pressed="false">ROI [−]</button>
         </div>
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
@@ -190,7 +192,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     return `<span class="dot ${yes?"g":"r"}" role="img" aria-label="${yes?"Sim":"Não"}" title="${txt}"></span>`; };
   const tendencia=t=>{ if(!isNum(t.preco_compra)||!isNum(t.preco_venda)) return ""; const ch=(t.preco_venda/t.preco_compra-1)*100; const cls=Math.abs(ch)<2?"p-none":ch>0?"p-alta":"p-down"; const txt=(ch>=0?"+":"−")+Math.abs(ch).toFixed(1).replace(".",",")+"%"; return `<span class="pill ${cls}">${txt}</span> `; };
   let tokens=[], redes=[], meta=null;
-  const st={q:"",rede:"all",recent:false,sort:"ultima_utc",dir:"desc",excl:false};
+  const st={q:"",ins:"",roi:"",recent:false,sort:"ultima_utc",dir:"desc",excl:false};
 
   function refMs(){ let m=-Infinity; for(const t of tokens){const v=parseUTC(t.ultima_utc); if(v>m) m=v;} return m; }
   function isRecent(t,ref){ return ref-parseUTC(t.ultima_utc) <= 24*3600e3; }
@@ -210,8 +212,8 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
     const ref=refMs(), q=st.q.trim().toLowerCase();
     let rows=tokens.filter(t=>{
       const rs=t.redes||[];
-      if(st.rede==="both"&&rs.length<2) return false;
-      if(st.rede!=="all"&&st.rede!=="both"&&!rs.includes(st.rede)) return false;
+      if(st.ins){ const h=insiderH(t); if(h===null) return false; if(st.ins==="yes"&&!(h<1)) return false; if(st.ins==="no"&&h<1) return false; }
+      if(st.roi){ const r=roi(t); if(r===null) return false; if(st.roi==="pos"&&!(r>0)) return false; if(st.roi==="neg"&&!(r<0)) return false; }
       if(st.recent&&!isRecent(t,ref)) return false;
       if(q&&!((t.simbolo||"")+" "+(t.nome||"")+" "+(t.contrato||"")).toLowerCase().includes(q)) return false;
       return true;
@@ -262,8 +264,11 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
 
   // Controls
   $("q-tok").addEventListener("input",e=>{st.q=e.target.value;renderTokens();});
-  $("f-rede").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;st.rede=b.dataset.v;
-    for(const x of $("f-rede").children) x.setAttribute("aria-pressed",x===b?"true":"false"); renderTokens();});
+  // Botões de alternância: clicar no botão ativo limpa o filtro
+  const toggleSeg=(id,key)=>$(id).addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;
+    st[key]=st[key]===b.dataset.v?"":b.dataset.v;
+    for(const x of $(id).children) x.setAttribute("aria-pressed",x.dataset.v===st[key]?"true":"false"); renderTokens();});
+  toggleSeg("f-ins","ins"); toggleSeg("f-roi","roi");
   $("f-recent").addEventListener("change",e=>{st.recent=e.target.checked;renderTokens();});
   document.querySelectorAll("th button[data-sort]").forEach(b=>b.addEventListener("click",()=>{
     const k=b.dataset.sort;
