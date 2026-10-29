@@ -139,7 +139,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <label class="chk"><input type="checkbox" id="f-recent"> Só ativos 24 h</label>
       </div>
     </div>
-    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · só tokens lançados há 30 dias ou menos, com última venda nos últimos 7 dias (incluindo hoje) e compras ≥ 2.000 USDC · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Entradas = n.º de compras das Redes 1 e 2, acumuladas desde o início; Total USD = valor dessas compras em stablecoins (≈ inclui WBNB convertido)</span></div>
+    <div class="legend"><span><i class="sw"></i>Operação nas 24 h anteriores à atividade mais recente</span><span>Datas em UTC · ícone copia o contrato · "Gráfico" abre o par no DexScreener · Data Lanc. = criação da 1.ª pool na BSC · Insider: verde se a 1.ª compra foi menos de 1 h após o lançamento · só tokens lançados há 30 dias ou menos, com última venda nos últimos 7 dias (incluindo hoje) e compras ≥ 2.000 USDC · Holders, Mcap e Volume: ao vivo do GeckoTerminal (Volume = variação das últimas 24 h face às 24 h anteriores, pool principal; ≈ = FDV quando o market cap não é reportado) · mostra 10 linhas, faça scroll na tabela para ver as restantes</span><span>Entradas = n.º de compras das Redes 1 e 2, acumuladas desde o início; Total USD = valor dessas compras em stablecoins (≈ inclui WBNB convertido)</span></div>
     <div class="tbl ten" id="wrap-tok">
       <table>
         <thead><tr>
@@ -155,11 +155,14 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
           <th><button type="button" data-sort="ultima_utc" data-dir="desc">Última operação</button></th>
           <th class="num"><button type="button" data-sort="compras">Entradas</button></th>
           <th class="num"><button type="button" data-sort="compras_usdc">Total USD</button></th>
+          <th class="num"><button type="button" data-sort="holders" title="Total de holders (GeckoTerminal, ao vivo)">Holders</button></th>
+          <th class="num"><button type="button" data-sort="mcap" title="Market cap em USD (GeckoTerminal, ao vivo)">Mcap</button></th>
+          <th class="num"><button type="button" data-sort="vol_var" title="Volume USD das últimas 24 h face às 24 h anteriores (pool principal, ao vivo)">Volume</button></th>
           <th class="num">Valor Token 1.ª Compra</th>
           <th class="num">Valor Token Última Venda</th>
           <th>Descrição</th>
         </tr></thead>
-        <tbody id="tb-tok"><tr><td colspan="15" class="empty">A carregar tokens…</td></tr></tbody>
+        <tbody id="tb-tok"><tr><td colspan="18" class="empty">A carregar tokens…</td></tr></tbody>
       </table>
     </div>
   </section>
@@ -185,6 +188,46 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   const fmtP=v=>{ if(!isNum(v)) return '<span style="opacity:.6">—</span>'; let d; if(v>=1000) d=0; else if(v>=1) d=4; else d=Math.max(4,-Math.floor(Math.log10(v))+3); return "$ "+new Intl.NumberFormat("pt-PT",{minimumFractionDigits:0,maximumFractionDigits:Math.min(d,20)}).format(v); };
   // Dias: diferença inteira entre a data de hoje (UTC) e a data de lançamento
   const diasLanc=t=>{ const b=parseUTC((t.lancamento_utc||"").slice(0,10)); if(!isFinite(b)) return null; const n=new Date(); return Math.round((Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate())-b)/864e5); };
+  // Dados de mercado (holders, market cap, volume) — lidos ao vivo do GeckoTerminal no browser de quem abre a página
+  const LOAD='<span style="opacity:.5" title="A carregar dados de mercado">…</span>';
+  const DASH='<span style="opacity:.6">—</span>';
+  const nfC=new Intl.NumberFormat("pt-PT",{notation:"compact",maximumFractionDigits:1});
+  const mcapV=t=>isNum(t.mcap)?t.mcap:isNum(t.fdv)?t.fdv:null;
+  const fmtMcap=t=>{ if(isNum(t.mcap)) return `<span title="Market cap: $ ${nf0.format(t.mcap)}">$ ${nfC.format(t.mcap)}</span>`;
+    if(isNum(t.fdv)) return `<span title="Market cap não reportado; mostra o FDV: $ ${nf0.format(t.fdv)}">≈ $ ${nfC.format(t.fdv)}</span>`; return DASH; };
+  const fmtVol=t=>{ if(!isNum(t.vol_var)) return isNum(t.vol24)?`<span title="Volume 24 h: $ ${nf0.format(t.vol24)} · sem volume nas 24 h anteriores">$ ${nfC.format(t.vol24)}</span>`:DASH;
+    const v=t.vol_var, c=Math.abs(v)<2?"":v>0?"up":"down";
+    return `<span class="roi ${c}" title="Volume 24 h: $ ${nf0.format(t.vol24)} · 24 h anteriores: $ ${nf0.format(t.vol_prev)}">${v>=0?"+":"−"}${new Intl.NumberFormat("pt-PT",{minimumFractionDigits:1,maximumFractionDigits:1}).format(Math.abs(v))}%</span>`; };
+  const GT="https://api.geckoterminal.com/api/v2/networks/bsc", MK_KEY="mk-cache-v1", MK_TTL=10*60e3;
+  const pause=ms=>new Promise(r=>setTimeout(r,ms));
+  const toNum=v=>{ const n=parseFloat(v); return isFinite(n)?n:null; };
+  async function gtGet(path){ for(let i=0;i<3;i++){ const r=await fetch(GT+path); if(r.ok) return r.json(); if(r.status!==429) throw new Error(r.status); await pause(2500*(i+1)); } throw new Error("429"); }
+  function mkCache(){ try{ const c=JSON.parse(localStorage.getItem(MK_KEY)||"{}"); return Date.now()-(c.t||0)<MK_TTL?(c.d||{}):{}; }catch(_){ return {}; } }
+  function mkSave(d){ try{ localStorage.setItem(MK_KEY,JSON.stringify({t:Date.now(),d})); }catch(_){} }
+  async function loadMarket(){
+    const cache=mkCache(), out={...cache};
+    for(const t of tokens){ const a=(t.contrato||"").toLowerCase(); if(cache[a]) Object.assign(t,cache[a]); else t.mk_loading=true; }
+    renderTokens();
+    for(const t of tokens){
+      const a=(t.contrato||"").toLowerCase(); if(cache[a]) continue;
+      const m={holders:null,mcap:null,fdv:null,vol24:null,vol_prev:null,vol_var:null};
+      try{
+        const j=await gtGet(`/tokens/${a}`), at=(j.data&&j.data.attributes)||{};
+        m.mcap=toNum(at.market_cap_usd); m.fdv=toNum(at.fdv_usd);
+        const pool=(((j.data.relationships||{}).top_pools||{}).data||[])[0];
+        if(pool&&pool.id){
+          const o=await gtGet(`/pools/${pool.id.replace(/^bsc_/,"")}/ohlcv/hour?aggregate=1&limit=72&currency=usd`);
+          const L=((o.data||{}).attributes||{}).ohlcv_list||[], now=Date.now()/1000;
+          const sum=(a0,a1)=>L.filter(x=>x[0]>=now-a1&&x[0]<now-a0).reduce((s,x)=>s+(toNum(x[5])||0),0);
+          m.vol24=sum(0,86400); m.vol_prev=sum(86400,172800);
+          m.vol_var=m.vol_prev>0?(m.vol24/m.vol_prev-1)*100:null;
+        }
+      }catch(_){}
+      try{ const j=await gtGet(`/tokens/${a}/info`); m.holders=toNum((((j.data||{}).attributes||{}).holders||{}).count); }catch(_){}
+      delete t.mk_loading; Object.assign(t,m); out[a]=m; renderTokens(); await pause(400);
+    }
+    mkSave(out);
+  }
   const roi=t=>(isNum(t.preco_compra)&&isNum(t.preco_venda)&&t.preco_compra>0)?(t.preco_venda/t.preco_compra-1)*100:null;
   const fmtRoi=t=>{const r=roi(t); if(r===null) return '<span style="opacity:.6">—</span>'; const c=Math.abs(r)<2?"":r>0?"up":"down"; return `<span class="roi ${c}">${r>=0?"+":"−"}${new Intl.NumberFormat("pt-PT",{minimumFractionDigits:1,maximumFractionDigits:1}).format(Math.abs(r))}%</span>`;};
   // Insider: 1.ª compra das redes menos de 1 hora depois do lançamento (criação da 1.ª pool)
@@ -224,15 +267,16 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
       return true;
     });
     const k=st.sort, d=st.dir==="asc"?1:-1;
-    const numK=["compras","compras_usdc","vendas","vendas_usdc"].includes(k);
+    const numK=["compras","compras_usdc","vendas","vendas_usdc","holders","vol_var"].includes(k);
     rows.sort((a,b)=>{ if(k==="insider"){const x=insiderH(a),y=insiderH(b); const xa=x===null?1e9:x, ya=y===null?1e9:y; return (xa-ya)*d;}
+      if(k==="mcap"){const x=mcapV(a),y=mcapV(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
       if(k==="dias"){const x=diasLanc(a),y=diasLanc(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
       if(k==="roi"){const x=roi(a),y=roi(b); if(x===null&&y===null) return 0; if(x===null) return 1; if(y===null) return -1; return (x-y)*d;}
       if(numK){const x=isNum(a[k])?a[k]:-1,y=isNum(b[k])?b[k]:-1; return (x-y)*d;} const x=a[k]||"",y=b[k]||""; return (k==="simbolo"?x.localeCompare(y,"pt",{sensitivity:"base"}):(x<y?-1:x>y?1:0))*d;});
     $("tok-count").textContent = `${rows.length} de ${tokens.length}`;
     const tb=$("tb-tok");
-    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="15" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
-    if(!rows.length){ tb.innerHTML=`<tr><td colspan="15" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
+    if(!tokens.length){ tb.innerHTML=`<tr><td colspan="18" class="empty">Ainda sem tokens registados. A tarefa diária acrescenta-os aqui.</td></tr>`; return; }
+    if(!rows.length){ tb.innerHTML=`<tr><td colspan="18" class="empty">Nenhum token corresponde aos filtros.</td></tr>`; return; }
     tb.innerHTML=rows.map(t=>{
       const rec=isRecent(t,ref);
       return `<tr class="${rec?"recent":""}">
@@ -248,6 +292,9 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         <td class="mono">${esc(t.ultima_utc)}</td>
         <td class="num">${fmtN(t.compras)}</td>
         <td class="num">${fmtU(t.compras_usdc,t.aprox)}</td>
+        <td class="num">${t.mk_loading?LOAD:fmtN(t.holders)}</td>
+        <td class="num">${t.mk_loading?LOAD:fmtMcap(t)}</td>
+        <td class="num">${t.mk_loading?LOAD:fmtVol(t)}</td>
         <td class="num"${t.data_compra?` title="${esc(t.data_compra)} UTC"`:""}>${fmtP(t.preco_compra)}</td>
         <td class="num"${t.data_venda?` title="${esc(t.data_venda)} UTC"`:""}>${fmtP(t.preco_venda)}</td>
         <td class="desc">${t.descricao?esc(t.descricao):'<span style="opacity:.6">—</span>'}</td></tr>`;
@@ -293,9 +340,9 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
         // Regra do volume mínimo: total de compras ≥ 2000 USDC (ou equivalente)
         .filter(x=>(isNum(x.compras_usdc)?x.compras_usdc:0)>=((m&&m.compras_min_usdc)||2000))
         // Regra do lançamento: só tokens lançados há 30 dias ou menos
-        .filter(x=>{ const n=diasLanc(x); return n===null||n<=((m&&m.lancamento_max_dias)||30); }); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll();
+        .filter(x=>{ const n=diasLanc(x); return n===null||n<=((m&&m.lancamento_max_dias)||30); }); redes=Array.isArray(r.itens)?r.itens:[]; meta=m; renderAll(); loadMarket();
     }catch(e){
-      $("tb-tok").innerHTML=`<tr><td colspan="15" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
+      $("tb-tok").innerHTML=`<tr><td colspan="18" class="empty">Não foi possível carregar os dados. Recarregue a página.</td></tr>`;
     }
   })();
 })();
