@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Monitor Wash KTI</title>
+<title>Monitor Wash Trading</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
@@ -113,7 +113,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
 <div class="wrap">
   <header>
     <div class="eyebrow">BSC · BEP-20 · origem <b>KTI 0xe254…b9d6</b></div>
-    <h1>Monitor de wash trading das redes do KTI</h1>
+    <h1>Monitor de wash trading</h1>
     <p class="lede">Tokens em que as redes de wash trading identificadas no KTI estão a operar, e o registo dessas redes. Atualizado todos os dias às 10:00 (Lisboa).</p>
     <div class="status" id="status">
       <div class="stat"><span class="k">Última atualização (UTC)</span><span class="v small" id="s-upd">—</span></div>
@@ -200,7 +200,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   function isRecent(t,ref){ return ref-parseUTC(t.ultima_utc) <= 24*3600e3; }
   // Rede (blockchain) onde o token foi criado; por omissão BNB, porque a monitorização é na BSC
   function redeOrigem(t){ const r=(t.rede_origem||"BNB").toUpperCase(); const c=r==="BNB"?"p-bnb":r==="ETH"?"p-r1":r==="BTC"?"p-btc":"p-none";
-    return `<span class="pill ${c}" title="${r==="BNB"?"Token criado na BNB Chain":"Token criado na rede "+esc(r)+" e trazido para a BSC por ponte"}">Rede ${esc(r)}</span>`; }
+    return `<span class="pill ${c}" title="${r==="BNB"?"Token criado na BNB Chain":"Token criado na rede "+esc(r)+" e trazido para a BSC por ponte"}">${esc(r)}</span>`; }
   function redePills(arr){ return `<div class="pills">${(arr||[]).map(r=>`<span class="pill ${r==="Rede 1"?"p-r1":r==="Rede 2"?"p-r2":"p-none"}">${esc(r)}</span>`).join("")}</div>`; }
 
   function renderStatus(){
