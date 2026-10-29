@@ -165,7 +165,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   </section>
 
 
-  <footer id="foot">Fonte: análise on-chain do token KTI (BSC). Dados atualizados diariamente.</footer>
+  <footer id="foot">Fonte: Dados atualizados diariamente (<span id="foot-upd">—</span>)</footer>
 </div>
 
 <script>
@@ -206,6 +206,7 @@ footer{font-size:12.5px;color:var(--muted);border-top:1px solid var(--line);padd
   function renderStatus(){
     const ref=refMs();
     $("s-upd").textContent = meta&&meta.atualizado_utc ? meta.atualizado_utc : "—";
+    $("foot-upd").textContent = meta&&meta.atualizado_utc ? meta.atualizado_utc+" UTC" : "—";
     $("s-tok").textContent = tokens.length || "—";
     $("s-act").textContent = tokens.length ? tokens.filter(t=>isRecent(t,ref)).length : "—";
     const wash=redes.filter(r=>!r.excluir).length;
